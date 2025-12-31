@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智慧資料多頁勾選系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .filter-content { max-height: 200px; overflow-y: auto; }
+        .fade-in { animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-900 font-sans">
+
+    <!-- 登入與註冊介面 -->
+    <div id="loginOverlay" class="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl p-8 max-w-sm w-full fade-in">
+            <div id="loginBox">
+                <div class="text-center mb-6">
+                    <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800">系統登入</h2>
+                </div>
+                <div class="space-y-4">
+                    <input type="text" id="userAccount" placeholder="帳號" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="userPwd" placeholder="密碼" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
+                    <button onclick="authAction('login')" id="loginBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-all disabled:bg-slate-400">登入系統</button>
+                    <p class="text-center text-sm text-slate-500">還沒有帳號？ <button onclick="toggleAuth(true)" class="text-blue-600 font-bold">立即註冊</button></p>
+                </div>
+            </div>
+
+            <div id="registerBox" class="hidden">
+                <div class="text-center mb-6">
+                    <div class="bg-emerald-500 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <i data-lucide="user-plus" class="text-white w-8 h-8"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800">註冊帳號</h2>
+                </div>
+                <div class="space-y-4">
+                    <input type="text" id="regRealName" placeholder="您的真實姓名" class="w-full px-4 py-3 bg-slate-50 border rounded-xl">
+                    <input type="text" id="regAccount" placeholder="註冊帳號" class="w-full px-4 py-3 bg-slate-50 border rounded-xl">
+                    <input type="password" id="regPwd" placeholder="設定密碼" class="w-full px-4 py-3 bg-slate-50 border rounded-xl">
+                    <button onclick="authAction('register')" id="regBtn" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all disabled:bg-slate-400">確認註冊</button>
+                    <p class="text-center text-sm text-slate-500"><button onclick="toggleAuth(false)" class="text-emerald-600 font-bold">返回登入</button></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主程式內容 -->
+    <div id="mainApp" class="max-w-6xl mx-auto py-8 px-4 blur-md transition-all">
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 flex justify-between items-center border border-slate-200">
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2"><i data-lucide="database" class="text-blue-600"></i>智慧篩選系統</h1>
+            <div class="flex items-center gap-3">
+                <span id="displayUserName" class="text-sm font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-full">未登入</span>
+                <button onclick="location.reload()" class="text-slate-300 hover:text-red-500"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden sticky top-6">
+                    <div class="p-4 bg-slate-50 border-b flex justify-between items-center">
+                        <span class="text-sm font-bold">篩選面板</span>
+                        <button onclick="resetFilters()" class="text-xs text-blue-600 hover:underline">重設</button>
+                    </div>
+                    <div id="filterAccordion" class="divide-y divide-slate-100 max-h-[70vh] overflow-y-auto no-scrollbar"></div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3 space-y-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 h-[600px] flex flex-col overflow-hidden">
+                    <div class="p-4 border-b flex justify-between items-center bg-white">
+                        <div class="flex items-center gap-4">
+                            <span id="matchCount" class="text-xs font-bold text-blue-600 uppercase tracking-widest">0 項符合</span>
+                        </div>
+                        <button onclick="fetchData()" id="refreshBtn" class="text-slate-400 hover:text-blue-600 transition-colors">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div id="itemList" class="flex-1 overflow-y-auto divide-y divide-slate-50 bg-slate-50/30">
+                        <div class="p-10 text-center text-slate-400 text-sm flex flex-col items-center gap-3">正在載入試算表資料...</div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4">
+                    <input type="password" id="docPassword" placeholder="輸入文件密碼 (如: 111)" class="flex-1 px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                    <button onclick="submitData()" id="submitBtn" class="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2 disabled:bg-slate-400">
+                        <i data-lucide="send" class="w-5 h-5"></i>確認勾選匯出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycby_A5Kik4N2D50HBV8lCI49FyqIwqJ6lqzPyI2w2zjx0fpkjD9e4d7BiK-7aZ0eMbf3/exec";
+        const DOC_MAP = { "111": "1JF9i9QpymXyZLyR974ovD8rQ3uQ9Ct-pRh6cueY6A60" };
+        
+        let rawHeaders = [], allDataRows = [], selectedFilters = {}, currentUserRealName = "";
+
+        const targetSpecs = [
+            { letter: 'A', idx: 0 },
+            { letter: 'B', idx: 1 },
+            { letter: 'D', idx: 3 },
+            { letter: 'S', idx: 18 },
+            { letter: 'T', idx: 19 },
+            { letter: 'U', idx: 20 },
+            { letter: 'V', idx: 21 }
+        ];
+
+        lucide.createIcons();
+
+        function toggleAuth(showReg) {
+            document.getElementById('loginBox').classList.toggle('hidden', showReg);
+            document.getElementById('registerBox').classList.toggle('hidden', !showReg);
+        }
+
+        async function postToGAS(data) {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(data),
+                mode: 'cors'
+            });
+            return await response.json();
+        }
+
+        async function authAction(type) {
+            const btn = type === 'login' ? document.getElementById('loginBtn') : document.getElementById('regBtn');
+            const originalText = btn.innerText;
+            
+            let payload = { action: type };
+            if (type === 'login') {
+                payload.username = document.getElementById('userAccount').value.trim();
+                payload.password = document.getElementById('userPwd').value.trim();
+                if (!payload.username || !payload.password) return alert("請填寫帳號密碼");
+            } else {
+                payload.realName = document.getElementById('regRealName').value.trim();
+                payload.username = document.getElementById('regAccount').value.trim();
+                payload.password = document.getElementById('regPwd').value.trim();
+                if (!payload.realName || !payload.username || !payload.password) return alert("請填寫完整資訊");
+            }
+
+            btn.disabled = true;
+            btn.innerText = "連線中...";
+
+            try {
+                const result = await postToGAS(payload);
+                if (result.success) {
+                    if (type === 'login') {
+                        currentUserRealName = result.realName;
+                        document.getElementById('displayUserName').innerText = currentUserRealName;
+                        document.getElementById('loginOverlay').classList.add('hidden');
+                        document.getElementById('mainApp').classList.remove('blur-md');
+                        fetchData();
+                    } else {
+                        alert("註冊成功！現在請登入");
+                        toggleAuth(false);
+                    }
+                } else {
+                    alert("失敗: " + result.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("連線失敗！");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = originalText;
+            }
+        }
+
+        async function fetchData() {
+            const listDiv = document.getElementById('itemList');
+            listDiv.innerHTML = '<div class="p-10 text-center text-slate-400 text-sm flex flex-col items-center gap-3"><div class="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>讀取雲端資料中...</div>';
+            
+            try {
+                const res = await fetch(API_URL);
+                const result = await res.json();
+                
+                rawHeaders = (result.headers || []).map(h => String(h).trim());
+                allDataRows = result.rows || [];
+                
+                createFilterUI();
+                applyFilters();
+            } catch (e) { 
+                console.error("Fetch Error", e);
+                listDiv.innerHTML = '<div class="p-10 text-center text-red-400 text-sm">載入失敗</div>';
+            }
+        }
+
+        function createFilterUI() {
+            const container = document.getElementById('filterAccordion');
+            container.innerHTML = '';
+            selectedFilters = {};
+
+            const sheetNames = [...new Set(allDataRows.map(r => r['_來源分頁'] || "未知"))].filter(s => s).sort();
+            if (sheetNames.length > 0) {
+                const sheetHeader = "工作表名稱";
+                selectedFilters[sheetHeader] = [];
+                renderFilterGroup(container, sheetHeader, sheetNames, { letter: '★', isSystem: true });
+            }
+
+            targetSpecs.forEach(spec => {
+                const headerName = rawHeaders[spec.idx];
+                if (!headerName || headerName === "") return;
+
+                const options = [...new Set(allDataRows.map(r => {
+                    const val = r[headerName];
+                    return (val !== undefined && val !== null) ? String(val).trim() : "";
+                }))].filter(s => s !== "").sort();
+                
+                if(options.length === 0) return;
+
+                selectedFilters[headerName] = [];
+                renderFilterGroup(container, headerName, options, spec);
+            });
+            lucide.createIcons();
+        }
+
+        function renderFilterGroup(container, headerName, options, spec) {
+            const group = document.createElement('div');
+            group.className = "group-filter border-b border-slate-50 last:border-0";
+            
+            const tagClass = spec.isSystem 
+                ? "bg-amber-500 text-white" 
+                : "bg-blue-600 text-white";
+
+            group.innerHTML = `
+                <button class="w-full p-4 flex justify-between items-center text-xs font-bold text-slate-600 hover:bg-slate-50/50 transition-colors" onclick="toggleAccordion(this)">
+                    <span class="flex items-center gap-2">
+                        <span class="${tagClass} w-4 h-4 flex items-center justify-center rounded-[4px] text-[8px] uppercase font-black shadow-sm">${spec.letter}</span>
+                        ${headerName}
+                    </span>
+                    <i data-lucide="chevron-down" class="w-3 h-3 transition-transform duration-200"></i>
+                </button>
+                <div class="hidden px-4 pb-4 space-y-1 filter-content no-scrollbar">
+                    ${options.map(opt => `
+                        <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-2 rounded-lg transition-all group">
+                            <input type="checkbox" onchange="updateFilter('${headerName}', '${opt}', this.checked)" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                            <span class="text-[11px] text-slate-500 group-hover:text-slate-800">${opt}</span>
+                        </label>`).join('')}
+                </div>`;
+            container.appendChild(group);
+        }
+
+        function toggleAccordion(btn) {
+            const content = btn.nextElementSibling;
+            const icon = btn.querySelector('i') || btn.querySelector('svg');
+            if (content) {
+                const isOpen = !content.classList.contains('hidden');
+                content.classList.toggle('hidden');
+                if (icon) {
+                    icon.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+                }
+            }
+        }
+
+        function updateFilter(h, v, checked) {
+            if (checked) {
+                if (!selectedFilters[h]) selectedFilters[h] = [];
+                selectedFilters[h].push(v);
+            } else {
+                selectedFilters[h] = selectedFilters[h].filter(i => i !== v);
+            }
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const filtered = allDataRows.filter(row => {
+                for (let h in selectedFilters) {
+                    if (selectedFilters[h] && selectedFilters[h].length > 0) {
+                        if (h === "工作表名稱") {
+                            if (!selectedFilters[h].includes(row['_來源分頁'] || "未知")) return false;
+                        } else {
+                            const cellVal = (row[h] !== undefined && row[h] !== null) ? String(row[h]).trim() : "";
+                            if (!selectedFilters[h].includes(cellVal)) return false;
+                        }
+                    }
+                }
+                return true;
+            });
+            renderList(filtered);
+        }
+
+        function renderList(data) {
+            const listDiv = document.getElementById('itemList');
+            document.getElementById('matchCount').innerText = `${data.length} 項符合`;
+            
+            if (data.length === 0) {
+                listDiv.innerHTML = '<div class="p-20 text-center text-slate-400 text-sm italic">目前沒有符合條件的資料</div>';
+                return;
+            }
+
+            listDiv.innerHTML = data.map((row, idx) => {
+                const displayContent = targetSpecs.map(spec => {
+                    const headerName = rawHeaders[spec.idx] || `欄位 ${spec.letter}`;
+                    const val = row[headerName];
+                    
+                    return `<div class="flex flex-col min-w-[70px] flex-1">
+                                <span class="text-[10px] text-blue-500 font-bold mb-1 border-b border-blue-100/30 truncate uppercase">${headerName}</span>
+                                <span class="text-[13px] text-slate-700 font-semibold break-words leading-tight">${(val !== undefined && val !== "") ? val : "-"}</span>
+                            </div>`;
+                }).join('');
+
+                // 獲取原始資料
+                const valA = row[rawHeaders[1]] || ""; // 性別 (A)
+                let valB = row[rawHeaders[0]] || "";   // 編號 (B)
+                const valD = row[rawHeaders[3]] || ""; // 求道名 (D)
+                const valS = row[rawHeaders[18]] || ""; // 區別 (S)
+
+                // 修正：匯出時移除編號開頭的 0 (例如 001 -> 1)
+                // 邏輯：如果是純數字字串，轉成數字再轉回字串即可移除前導 0
+                if (valB && !isNaN(valB)) {
+                    valB = String(Number(valB));
+                }
+                
+                // 組合格式：性別 編號 求道名｜（區別）
+                const exportVal = `${valA} ${valB} ${valD}｜（${valS}）`.trim();
+                
+                return `
+                <label class="flex items-start p-5 hover:bg-white cursor-pointer transition-all border-b border-slate-100 group relative">
+                    <input type="checkbox" name="item" data-export-val="${exportVal}" class="w-6 h-6 mt-3 rounded-md border-slate-300 text-blue-600 focus:ring-blue-500 shrink-0 shadow-sm">
+                    <div class="ml-5 flex-1 overflow-hidden">
+                        <div class="flex justify-between items-center mb-3">
+                            <span class="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+                                <i data-lucide="hash" class="w-3 h-3"></i> 行號 #${idx + 2} <span class="mx-1 text-slate-200">|</span> <span class="text-amber-600 font-bold">${row['_來源分頁'] || 'Sheet'}</span>
+                            </span>
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-x-6 gap-y-4">
+                            ${displayContent}
+                        </div>
+                    </div>
+                </label>`;
+            }).join('');
+            
+            lucide.createIcons();
+        }
+
+        async function submitData() {
+            const pwd = document.getElementById('docPassword').value.trim();
+            const checked = document.querySelectorAll('input[name="item"]:checked');
+            
+            if (checked.length === 0) return alert("請至少選擇一項資料");
+            
+            const targetDocId = DOC_MAP[pwd];
+            if (!targetDocId) return alert("文件密碼不正確，無法匯出");
+            
+            const btn = document.getElementById('submitBtn');
+            const originalHTML = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerText = "傳送中...";
+
+            try {
+                const payload = {
+                    action: 'export',
+                    items: Array.from(checked).map(i => i.getAttribute('data-export-val')),
+                    docId: pwd,
+                    targetDocId: targetDocId,
+                    sender: currentUserRealName || "使用者"
+                };
+
+                const res = await postToGAS(payload);
+                if (res.success) {
+                    alert("✅ 資料已成功依指定格式匯出 (編號已移除前導0)！");
+                    checked.forEach(c => c.checked = false);
+                    document.getElementById('docPassword').value = '';
+                } else { 
+                    alert("匯出失敗: " + res.message); 
+                }
+            } catch (e) { 
+                alert("伺服器連線失敗"); 
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+                lucide.createIcons();
+            }
+        }
+
+        function resetFilters() {
+            document.querySelectorAll('#filterAccordion input[type="checkbox"]').forEach(c => c.checked = false);
+            for(let h in selectedFilters) selectedFilters[h] = [];
+            applyFilters();
+        }
+    </script>
+</body>
+</html>
