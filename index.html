@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智慧資料多頁勾選系統</title>
+    <title>網頁名單勾選</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -33,7 +33,7 @@
                     <div class="bg-blue-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                         <i data-lucide="shield-check" class="text-white w-8 h-8"></i>
                     </div>
-                    <h2 class="text-2xl font-bold text-slate-800">系統登入</h2>
+                    <h2 class="text-2xl font-bold text-slate-800">勾選系統登入</h2>
                 </div>
                 <div class="space-y-4">
                     <input type="text" id="userAccount" placeholder="帳號" class="w-full px-4 py-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500">
@@ -112,11 +112,11 @@
         
         // 設定五組文件對應 (密碼: Google Doc ID)
         const DOC_MAP = { 
-            "111": "1JF9i9QpymXyZLyR974ovD8rQ3uQ9Ct-pRh6cueY6A60",
-            "222": "在此替換第二個文件ID",
-            "333": "在此替換第三個文件ID",
-            "444": "在此替換第四個文件ID",
-            "555": "在此替換第五個文件ID"
+            "111": "1tjLPdvchNV3gBB4oEXTQxo-DidvztFxmsgaxP4fqQmg",
+            "222": "1-brdXTq8205d4fRETIIhyIFOdfcVnOdfZz5KpFzd3oI",
+            "333": "14cyDbD782VBtYbtwq7zYNguDqe8HUVbCMDTY24KyXGo",
+            "444": "1Nv-uPF00pKcj53xcwEzAzlY5Bj0g1xSFbeQBmLMBLkk",
+            "555": "1wTqhH4ApfilybEF0PK_DVfXzqKis0RD4uue_4c2_m6o"
         };
         
         let rawHeaders = [], allDataRows = [], selectedFilters = {}, currentUserRealName = "";
@@ -350,8 +350,8 @@
                             </div>`;
                 }).join('');
 
-                const valA = row[rawHeaders[1]] || ""; // 性別 (A)
-                let valB = row[rawHeaders[0]] || "";   // 編號 (B)
+                const valA = row[rawHeaders[1]] || ""; // 性別 (B)
+                let valB = row[rawHeaders[0]] || "";   // 編號 (A)
                 const valD = row[rawHeaders[3]] || ""; // 求道名 (D)
                 const valS = row[rawHeaders[18]] || ""; // 區別 (S)
 
